@@ -1,0 +1,171 @@
+<router-outlet></router-outlet>
+<div class="container">
+  <div class="jumbotron jumbotron-fluid text-center">
+    <div class="container">
+      <h1 class="display-4">{{ title }}</h1>
+      <p class="lead">{{ introline }}</p>
+    </div>
+  </div>
+  <div *ngIf="!modelLoaded" class="row">
+    <div class="progress">
+      <div class="progress-bar progress-bar-striped bg-secondary progress-bar-animated" role="progressbar">
+        <b class="progress-text">Loading Model...</b>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="modelLoaded" class="row">
+    <div class="col mb-3 selecttxt">
+      Multiplier&nbsp;:
+    </div>
+    <div class="col text-center mb-3">
+      <div class="selectdiv">
+        <select [value]="multiplier" class="form-control" (change)="onMultiplierChange($event.target.value)">
+          <option *ngFor="let multiplier of multiplierArray">{{ multiplier.toFixed(2) }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="col text-left mb-3 selecttxt">
+      <button class="btn btn-primary mb-2" (click)="loadModel()">Load&nbsp;Model</button>
+    </div>
+  </div>
+  <div *ngIf="modelLoaded" class="row">
+    <div class="col text-center mb-3">
+      <button type="button" class="btn btn-lg btn-block" [ngClass]="imgBtnStatus ? 'btn-primary' : 'btn-secondary'" (click)="imageMode();">
+        <i class="fa fa-picture-o" aria-hidden="true"></i> &nbsp; Image
+      </button>
+    </div>
+    <div class="col text-center mb-3">
+      <button type="button" class="btn btn-lg btn-block" [ngClass]="webBtnStatus ? 'btn-primary' : 'btn-secondary'" (click)="videoMode()">
+        <i class="fa fa-camera" aria-hidden="true"></i> &nbsp; Webcam
+      </button>
+    </div>
+  </div>
+  <div *ngIf="modelLoaded && webBtnStatus" class="row">
+    <div class="col"></div>
+    <div class="col mb-3 text-center">
+      <button type="button" class="btn btn-success" (click)="videoPic = false; snapPhoto();"><i class="fa fa-camera-retro" aria-hidden="true"></i> Snap Photo </button>
+    </div>
+    <div class="col mb-3 text-center">
+      <button type="button" class="btn btn-danger" (click)="videoCanvasEnable = true; realTimeVideo();"><i class="fa fa-video-camera" aria-hidden="true"></i> Real Time Video </button>
+    </div>
+    <div class="col"></div>
+  </div>
+  <div class="row">
+    <div *ngIf="modelLoaded && imgBtnStatus" class="col mb-3 text-center">
+      <img id="image" class="img-responsive img-border" [src]="imageSrc" alt="No Image" (load)="Segmentation()" width="{{ imageWidth }}" height="{{ imageHeight }}" crossorigin="anonymous">
+    </div>
+    <div [hidden]="!modelLoaded || !webBtnStatus" class="col mb-3">
+      <video #videoElement class="img-border" width="{{ videoWidth }}" height="{{ videoHeight }}"></video>
+    </div>
+    <div *ngIf="modelLoaded && realTimeMode" class="col mb-3">
+      <canvas #videoCanvas id="videoCanvas" class="img-border" width="{{ videoCanvasWidth }}" height="{{ videoCanvasHeight }}"></canvas>
+    </div>
+    <div [hidden]="!modelLoaded || realTimeMode" class="col mb-3">
+      <canvas [hidden]="true" id="tempcanvas" width="{{ tempcanvasWidth }}" height="{{ tempcanvasHeight }}"></canvas>
+      <canvas id="canvas" class="img-border" width="{{ canvasWidth }}" height="{{ canvasHeight }}"></canvas>
+    </div>
+    <div [hidden]="!modelLoaded" class="col mb-3">
+      <div class="row">
+        <div class="col-6 mb-3">
+          <button class="btn mb-2" [ngClass]="(segmentation === 'personsegmentation') ? 'btn-info' : 'btn-secondary'" (click)="onSegmentationChange('personsegmentation')">Person Segmentation</button>
+        </div>
+        <div class="col-6 mb-3">
+          <button class="btn mb-2" [ngClass]="(segmentation === 'bodypartsegmentation') ? 'btn-info' : 'btn-secondary'" (click)="onSegmentationChange('bodypartsegmentation')">Body Part Segmentation</button>
+        </div>
+      </div>
+      <div *ngIf="segmentation === 'bodypartsegmentation'" class="row">
+        Select&nbsp;Color&nbsp;Scale&nbsp;:&nbsp;
+      </div>
+      <div *ngIf="segmentation === 'bodypartsegmentation'" class="row">
+        <div>
+          <button class="btn mb-2" [ngClass]="(colorScale === 'rainbow') ? 'btn-success' : 'btn-secondary'" (click)="onColorScaleChange('rainbow')">Rainbow</button>
+        </div>
+        &nbsp;
+        <div>
+          <button class="btn mb-2" [ngClass]="(colorScale === 'warm') ? 'btn-success' : 'btn-secondary'" (click)="onColorScaleChange('warm')">Warm</button>
+        </div>
+        &nbsp;
+        <div>
+          <button class="btn mb-2" [ngClass]="(colorScale === 'spectral') ? 'btn-success' : 'btn-secondary'" (click)="onColorScaleChange('spectral')">Spectral</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col mb-3 selecttxt">
+          Output&nbsp;Stride&nbsp;:
+        </div>
+        <div *ngIf="modelText !== 'Select Model'" class="col text-center mb-3">
+          <div class="selectdiv">
+            <select [value]="outputStride" class="form-control" (change)="onOutputStrideChange($event.target.value)">
+              <option *ngFor="let outputStride of outputStrideArray">{{ outputStride }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        Segmentation&nbsp;Threshold&nbsp;:
+        <ng5-slider [(value)]="segmentationThreshold" [options]="segmentationThresholdOptions" (userChangeEnd)="onSegmentationThresholdChanged($event)"></ng5-slider>
+      </div>
+      <br />
+      <div class="row slidertxt">
+        Flip&nbsp;Horizontally&nbsp;:&nbsp; &nbsp;
+        <label class="switch">
+          <input type="checkbox" [checked]="flipHorizontal" (change)="onFlipHorizontalChanged()">
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div *ngIf="segmentation === 'personsegmentation'" class="row slidertxt">
+        Bokeh&nbsp;Effect&nbsp;:&nbsp; &nbsp;
+        <label class="switch">
+          <input type="checkbox" [checked]="bokehEffect" (change)="onBokehEffectChanged()">
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div *ngIf="segmentation === 'personsegmentation' && bokehEffect" class="row">
+        Bokeh&nbsp;Edge&nbsp;Blur&nbsp;Amount&nbsp;:
+        <ng5-slider [(value)]="edgeBlurAmount" [options]="edgeBlurAmountOptions" (userChangeEnd)="onEdgeBlurAmountChanged($event)"></ng5-slider>
+      </div>
+      <div class="row slidertxt">
+        Mask&nbsp;Background&nbsp;:&nbsp; &nbsp;
+        <label class="switch">
+          <input type="checkbox" [checked]="maskBackground" (change)="onMaskBackgroundChanged()">
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div class="row">
+        Mask&nbsp;Opacity&nbsp;:
+        <ng5-slider [(value)]="opacity" [options]="opacityOptions" (userChangeEnd)="onOpacityChanged($event)"></ng5-slider>
+      </div>
+      <div class="row">
+        Mask&nbsp;Blur&nbsp;Amount&nbsp;:
+        <ng5-slider [(value)]="maskBlurAmount" [options]="maskBlurAmountOptions" (userChangeEnd)="onMaskBlurAmountChanged($event)"></ng5-slider>
+      </div>
+      <div *ngIf="segmentation === 'bodypartsegmentation'" class="row slidertxt">
+        Apply&nbsp;Pixelation&nbsp;:&nbsp; &nbsp;
+        <label class="switch">
+          <input type="checkbox" [checked]="pixelation" (change)="onPixelationChanged()">
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div *ngIf="segmentation === 'bodypartsegmentation' && pixelation" class="row">
+        Pixel&nbsp;Cell&nbsp;Width&nbsp;:
+        <ng5-slider [(value)]="pixelCellWidth" [options]="pixelCellWidthOptions" (userChangeEnd)="onPixelCellWidthChanged($event)"></ng5-slider>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="modelLoaded && imgBtnStatus" class="row">
+    <div class="col upload-box">
+      <div class="hold">
+        <span *ngIf="!fileError" class="file-text">{{ fileName }}</span>
+        <span *ngIf="fileError" class="file-text">
+          <i class="alert alert-danger" role="alert">
+            Only images are supported.
+          </i>
+        </span>
+        <span class="btn-file">
+          <i class="fa fa-folder-open" aria-hidden="true"></i> Browse File
+          <input #file type="file" (change)="browseFile(file.files)">
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
